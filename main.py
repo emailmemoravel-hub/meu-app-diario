@@ -19,12 +19,25 @@ def limpar_texto(t):
 
 if file_excel and file_json and file_pdf:
     try:
+        # Excel
         df_servidores = pd.read_excel(file_excel)
         lista_servidores = df_servidores.iloc[:, [0, 1]].values 
         
-        dados_json = json.load(file_json)
-        edicoes = dados_json.get('edicao', [])
+        # JSON (corrigido para evitar erro Extra data)
+        dados_json = []
+        for line in file_json:
+            try:
+                dados_json.append(json.loads(line))
+            except:
+                continue
+
+        # Se o JSON tiver chave 'edicao', usa; senão usa direto
+        if isinstance(dados_json, dict):
+            edicoes = dados_json.get('edicao', [])
+        else:
+            edicoes = dados_json
         
+        # PDF
         pdf_bytes = file_pdf.read()
         doc_pdf = fitz.open(stream=pdf_bytes, filetype="pdf")
         
@@ -65,3 +78,4 @@ if file_excel and file_json and file_pdf:
         st.error(f"Erro no processamento: {e}")
 else:
     st.info("Aguardando upload dos 3 arquivos no menu lateral.")
+
