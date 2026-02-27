@@ -3,6 +3,7 @@ import pandas as pd
 import json
 import fitz  # PyMuPDF
 import html
+import unicodedata
 
 st.set_page_config(page_title="Scanner PMSP Oficial", layout="wide")
 st.title("🔎 Busca Combinada: Excel + JSON + PDF")
@@ -14,8 +15,12 @@ file_json = st.sidebar.file_uploader("2. Diário Oficial (JSON)", type=['json'])
 file_pdf = st.sidebar.file_uploader("3. Diário Oficial (PDF)", type=['pdf'])
 
 def limpar_texto(t):
-    if not t: return ""
-    return html.unescape(str(t)).replace('<p>', '').replace('</p>', '').upper().strip()
+    if not t: 
+        return ""
+    texto = html.unescape(str(t)).replace('<p>', '').replace('</p>', '').upper().strip()
+    # Remove acentos
+    texto = ''.join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn')
+    return texto
 
 if file_excel and file_json and file_pdf:
     try:
@@ -23,13 +28,8 @@ if file_excel and file_json and file_pdf:
         df_servidores = pd.read_excel(file_excel)
         lista_servidores = df_servidores.iloc[:, [0, 1]].values 
         
-        # JSON (corrigido para evitar erro Extra data)
-        dados_json = []
-        for line in file_json:
-            try:
-                dados_json.append(json.loads(line))
-            except:
-                continue
+        # JSON (objeto único)
+        dados_json = json.load(file_json)
 
         # Se o JSON tiver chave 'edicao', usa; senão usa direto
         if isinstance(dados_json, dict):
@@ -49,14 +49,14 @@ if file_excel and file_json and file_pdf:
                 orgao = item.get('orgao', 'Não informado')
 
                 for serv in lista_servidores:
-                    nome = str(serv[0]).upper().strip()
+                    nome = limpar_texto(str(serv[0]))
                     rf = str(serv[1]).strip()
                     rf_curto = rf.split('-')[0].split('.')[0]
 
                     if nome in conteudo_json or rf_curto in conteudo_json:
                         pagina_final = "Verificar PDF"
                         for i in range(len(doc_pdf)):
-                            texto_pag = doc_pdf.load_page(i).get_text().upper()
+                            texto_pag = limpar_texto(doc_pdf.load_page(i).get_text())
                             if nome in texto_pag or rf_curto in texto_pag:
                                 pagina_final = i + 1
                                 break
@@ -78,4 +78,3 @@ if file_excel and file_json and file_pdf:
         st.error(f"Erro no processamento: {e}")
 else:
     st.info("Aguardando upload dos 3 arquivos no menu lateral.")
-
