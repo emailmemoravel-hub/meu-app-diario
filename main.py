@@ -58,18 +58,17 @@ if file_excel and file_json and file_pdf:
                     rf_curto = rf.split('-')[0].split('.')[0]
 
                     if nome in conteudo_json or rf_curto in conteudo_json:
-                        pagina_final = "Verificar PDF"
+                        paginas = []
                         for i in range(len(doc_pdf)):
                             texto_pag = limpar_texto(doc_pdf.load_page(i).get_text())
                             if nome in texto_pag or rf_curto in texto_pag:
-                                pagina_final = i + 1
-                                break
+                                paginas.append(i + 1)
                         
                         resultados.append({
                             "Nome": nome,
                             "RF": rf,
                             "Órgão": orgao,
-                            "Página": pagina_final
+                            "Páginas": ", ".join(map(str, paginas)) if paginas else "Verificar PDF"
                         })
 
         if resultados:
@@ -82,3 +81,4 @@ if file_excel and file_json and file_pdf:
         st.error(f"Erro no processamento: {e}")
 else:
     st.info("Aguardando upload dos 3 arquivos no menu lateral.")
+
